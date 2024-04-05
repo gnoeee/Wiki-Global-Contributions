@@ -299,7 +299,7 @@ async function displayUserEditCounts(username, startDate, endDate) {
         }
     });
 	
-        // Add total row if there are any rows displayed
+	    // Add total row if there are any rows displayed
         if (editCountsBody.children.length > 0) {
             const totalRow = document.createElement('tr');
             totalRow.innerHTML = `
@@ -308,14 +308,9 @@ async function displayUserEditCounts(username, startDate, endDate) {
                 <td>${totalDeletedEditCount}</td>
             `;
             editCountsBody.appendChild(totalRow);
-
-            // Display the table
-            document.getElementById('editCounts').style.display = 'table';
-        } else {
-            // Hide the table if no rows are displayed
-            document.getElementById('editCounts').style.display = 'none';
     }
 	
+
     // Display the note container if needed
     if (hasHighEditCount || totalLiveEditCount === 0 && totalDeletedEditCount === 0) {
         noteContainer.style.display = 'block';
