@@ -214,42 +214,17 @@
     }
 
 	// Function to display user edit counts
-    async function getUserEditCounts(username, startDate, endDate) {
-    const globalUserInfo = await fetchUserGlobalInfo(username);
+    async function displayUserEditCounts(username, startDate, endDate) {
+		console.log('Displaying user edit counts for:', username, startDate, endDate);
+		const editCounts = await getUserEditCounts(username, startDate, endDate);
+		console.log('Edit counts:', editCounts);
 
-    if (!globalUserInfo || (globalUserInfo.query.globaluserinfo && globalUserInfo.query.globaluserinfo.missing)) {
-        document.getElementById('noUsernameMessage').style.display = 'block';
-        return [];
-    }
-
-    const editCountsPromises = globalUserInfo.query.globaluserinfo.merged
-        .filter(contribution => contribution.editcount > 0)
-        .map(async contribution => {
-            const wikiUrl = contribution.url.replace('https://', '').replace(/\/$/, '');
-            const editCounts = await fetchEditCounts(wikiUrl, username, startDate, endDate);
-            return {
-                wiki: wikiUrl,
-                liveEditCount: editCounts.live_edit_count,
-                deletedEditCount: editCounts.deleted_edit_count,
-                warning: editCounts.warning
-            };
-        });
-
-    const editCounts = await Promise.all(editCountsPromises);
-    return editCounts.filter(counts => counts !== null);
-}
-
-async function displayUserEditCounts(username, startDate, endDate) {
-    console.log('Displaying user edit counts for:', username, startDate, endDate);
-    const editCounts = await getUserEditCounts(username, startDate, endDate);
-    console.log('Edit counts:', editCounts);
-
-    const editCountsBody = document.getElementById('editCountsBody');
-    const noteContainer = document.getElementById('noteContainer');
-    const projectNote = document.getElementById('projectNote');
-    editCountsBody.innerHTML = '';
-    noteContainer.innerHTML = '';
-    projectNote.innerHTML = '';
+		const editCountsBody = document.getElementById('editCountsBody');
+		const noteContainer = document.getElementById('noteContainer');
+		const projectNote = document.getElementById('projectNote');
+		editCountsBody.innerHTML = '';
+		noteContainer.innerHTML = '';
+		projectNote.innerHTML = '';
 
     if (editCounts.length === 0) {
         // No contributions found
