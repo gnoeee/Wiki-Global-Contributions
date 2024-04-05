@@ -1,0 +1,404 @@
+<!<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global User Contributions</title>
+    <style>	
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #343a40;
+            text-align: center;
+        }
+
+        header {
+            background-color: #007bff;
+            color: white;
+            padding: 1em;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        main {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="text"],
+        input[type="date"],
+        label,
+        button {
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        label {
+            min-width: 100px;
+            text-align: right;
+        }
+
+        input[type="text"],
+        input[type="date"] {
+            width: calc(26% - 10px);
+            box-sizing: border-box;
+        }
+
+        .date-inputs {
+            display: inline-block;
+            margin: 0;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        th:first-child, td:first-child {
+            border-left: none;
+        }
+
+        th:last-child, td:last-child {
+            border-right: none;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        #noteContainer {
+            margin-top: 10px;
+            display: none;
+            font-style: italic;
+        }
+		
+		#apiRequestsInfoContainer {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 5px 10px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+    }
+    </style>
+</head>
+<body>
+<main>
+<h1>Global Wiki Contributions</h1>
+    <form id="editCountsForm">
+        <input type="text" id="username" name="username" placeholder="Wiki Username" required>
+        <div class="date-inputs">
+            <label for="startDate">Start Date:</label>
+            <input type="date" id="startDate" name="startDate" required>
+            <label for="endDate">End Date:</label>
+            <input type="date" id="endDate" name="endDate" required>
+        </div>
+        <button type="submit">Get Contributions</button>
+        <button id="downloadCSVButton" type="button" style="display: none;">Download CSV</button>
+    </form>
+    
+    <table id="editCounts" style="display: none;">
+        <thead>
+            <tr>
+                <th>Wiki Project</th>
+                <th>Live Edit Count</th>
+                <th>Deleted Edit Count</th>
+            </tr>
+        </thead>
+        <tbody id="editCountsBody"></tbody>
+    </table>
+    <p id="noUsernameMessage" style="display: none; color: red;">Username not found</p>
+    <div id="noteContainer" style="display: none; color: green;">
+        <p id="projectNote" style="display: none; color: red;"></p>
+    </div>
+	<div id="apiRequestsInfoContainer"></div>
+</main>
+
+<script>
+    let totalApiRequests = 0;
+    let successfulApiRequests = 0;
+	let allApiRequestsInitiated = false;
+	
+	// Function to fetch user global info from MediaWiki API
+    async function fetchUserGlobalInfo(username) {
+        const apiUrl = `https://www.mediawiki.org/w/api.php?action=query&format=json&list=&meta=globaluserinfo&utf8=1&formatversion=2&guiuser=${username}&guiprop=editcount|rights|merged|groups|unattached&origin=*`;
+        try {
+            const response = await fetch(apiUrl);
+            if (response.ok) {
+                updateApiRequestsInfo();
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching user global info:', error);
+            return null;
+        }
+    }
+
+	// Function to fetch edit counts from XTools API
+    async function fetchEditCounts(wikiUrl, username, startDate, endDate) {
+        const apiUrl = `https://xtools.wmcloud.org/api/user/simple_editcount/${wikiUrl}/${username}/all/${startDate}/${endDate}`;
+        totalApiRequests++;
+        try {
+            const response = await fetch(apiUrl);
+            if (response.ok) {
+                successfulApiRequests++;
+                updateApiRequestsInfo();
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching edit counts:', error);
+            return null;
+        }
+    }
+
+	// Function to get user edit counts
+    async function getUserEditCounts(username, startDate, endDate) {
+        const globalUserInfo = await fetchUserGlobalInfo(username);
+
+        if (!globalUserInfo || (globalUserInfo.query.globaluserinfo && globalUserInfo.query.globaluserinfo.missing)) {
+            document.getElementById('noUsernameMessage').style.display = 'block';
+            return [];
+        }
+
+        const editCountsPromises = globalUserInfo.query.globaluserinfo.merged
+            .filter(contribution => contribution.editcount > 0)
+            .map(async contribution => {
+                const wikiUrl = contribution.url.replace('https://', '').replace(/\/$/, '');
+                const editCounts = await fetchEditCounts(wikiUrl, username, startDate, endDate);
+                return {
+                    wiki: wikiUrl,
+                    liveEditCount: editCounts.live_edit_count,
+                    deletedEditCount: editCounts.deleted_edit_count,
+                    warning: editCounts.warning
+                };
+            });
+
+        const editCounts = await Promise.all(editCountsPromises);
+        return editCounts.filter(counts => counts !== null);
+    }
+
+	// Function to display user edit counts
+    async function getUserEditCounts(username, startDate, endDate) {
+    const globalUserInfo = await fetchUserGlobalInfo(username);
+
+    if (!globalUserInfo || (globalUserInfo.query.globaluserinfo && globalUserInfo.query.globaluserinfo.missing)) {
+        document.getElementById('noUsernameMessage').style.display = 'block';
+        return [];
+    }
+
+    const editCountsPromises = globalUserInfo.query.globaluserinfo.merged
+        .filter(contribution => contribution.editcount > 0)
+        .map(async contribution => {
+            const wikiUrl = contribution.url.replace('https://', '').replace(/\/$/, '');
+            const editCounts = await fetchEditCounts(wikiUrl, username, startDate, endDate);
+            return {
+                wiki: wikiUrl,
+                liveEditCount: editCounts.live_edit_count,
+                deletedEditCount: editCounts.deleted_edit_count,
+                warning: editCounts.warning
+            };
+        });
+
+    const editCounts = await Promise.all(editCountsPromises);
+    return editCounts.filter(counts => counts !== null);
+}
+
+async function displayUserEditCounts(username, startDate, endDate) {
+    const editCounts = await getUserEditCounts(username, startDate, endDate);
+
+    const editCountsBody = document.getElementById('editCountsBody');
+    const noteContainer = document.getElementById('noteContainer');
+    const projectNote = document.getElementById('projectNote');
+    editCountsBody.innerHTML = '';
+    noteContainer.innerHTML = '';
+    projectNote.innerHTML = '';
+
+    if (editCounts.length === 0) {
+        // No contributions found
+        document.getElementById('noContributionsMessage').style.display = 'block';
+        return;
+    }
+
+    let totalLiveEditCount = 0;
+    let totalDeletedEditCount = 0;
+    let hasHighEditCount = false;
+    let highEditCountProjects = [];
+
+    editCounts.forEach(counts => {
+        totalLiveEditCount += counts.liveEditCount;
+        totalDeletedEditCount += counts.deletedEditCount;
+
+        if (counts.liveEditCount > 0 || counts.deletedEditCount > 0) {
+            const row = document.createElement('tr');
+            const wikiURL = `https://${counts.wiki}/w/index.php?title=Special%3AContributions&target=${username}&namespace=all&tagfilter=&start=${startDate}&end=${endDate}&limit=500`;
+
+            const liveLink = document.createElement('a');
+            liveLink.setAttribute('href', wikiURL);
+            liveLink.setAttribute('target', '_blank');
+            liveLink.textContent = counts.liveEditCount;
+
+            const cellWikiURL = document.createElement('td');
+            const cellLiveEditCount = document.createElement('td');
+            const cellDeletedEditCount = document.createElement('td');
+
+            cellDeletedEditCount.textContent = counts.deletedEditCount;
+            cellWikiURL.textContent = counts.wiki;
+            cellLiveEditCount.appendChild(liveLink);
+
+            row.appendChild(cellWikiURL);
+            row.appendChild(cellLiveEditCount);
+            row.appendChild(cellDeletedEditCount);
+
+            editCountsBody.appendChild(row);
+        }
+
+        if (counts.warning) {
+            hasHighEditCount = true;
+            highEditCountProjects.push(counts.wiki);
+        }
+    });
+
+    // Display the note container if needed
+    if (hasHighEditCount || totalLiveEditCount === 0 && totalDeletedEditCount === 0) {
+        noteContainer.style.display = 'block';
+        const note = document.createElement('p');
+        if (hasHighEditCount) {
+            note.textContent = 'Note: This user has made a substantially high number of edits on some wikis.';
+        } else {
+            note.textContent = 'Note: No Contributions found during this time period.';
+        }
+        noteContainer.appendChild(note);
+        if (hasHighEditCount) {
+            if (highEditCountProjects.length > 0) {
+                const projectNote = document.createElement('p');
+                projectNote.textContent = `Projects: ${highEditCountProjects.join(', ')}`;
+                noteContainer.appendChild(projectNote);
+            }
+        }
+    } else {
+        noteContainer.style.display = 'none';
+    }
+
+    // Show the download button
+    document.getElementById('downloadCSVButton').style.display = 'inline';
+}
+
+    function downloadCSV() {
+        const table = document.getElementById('editCounts');
+        const rows = table.querySelectorAll('tr');
+
+        let csvContent = 'data:text/csv;charset=utf-8,';
+        const headers = ['Wiki Project', 'Live Edit Count', 'Deleted Edit Count'].join(',') + '\r\n';
+        csvContent += headers;
+
+        rows.forEach((row, index) => {
+            if (index > 0) { // Skip header row
+                const rowData = [];
+                row.querySelectorAll('td').forEach(cell => {
+                    rowData.push(cell.textContent.trim());
+                });
+                csvContent += rowData.join(',') + '\r\n';
+            }
+        });
+
+        const username = document.getElementById('username').value;
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `${username}_edit_counts.csv`);
+        document.body.appendChild(link); // Required for Firefox
+        link.click();
+    }
+
+    document.getElementById('downloadCSVButton').addEventListener('click', downloadCSV);
+
+    // Check if the URL contains the username, start date, and end date parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const usernameFromURL = urlParams.get('username');
+    const startDateFromURL = urlParams.get('startDate');
+    const endDateFromURL = urlParams.get('endDate');
+
+    if (usernameFromURL && startDateFromURL && endDateFromURL) {
+        // Fill the form fields with values from the URL
+        document.getElementById('username').value = usernameFromURL;
+        document.getElementById('startDate').value = startDateFromURL;
+        document.getElementById('endDate').value = endDateFromURL;
+
+        // Trigger the function to fetch user contributions
+        displayUserEditCounts(usernameFromURL, startDateFromURL, endDateFromURL);
+    }
+
+    // Display the count of successful API requests
+    window.addEventListener('load', () => {
+        const apiRequestsInfoContainer = document.getElementById('apiRequestsInfoContainer');
+        apiRequestsInfoContainer.textContent = `Total API Requests: ${totalApiRequests}, Successful API Requests: ${successfulApiRequests}`;
+    });
+	
+	// Function to update API requests info
+	function updateApiRequestsInfo() {
+		const apiRequestsInfoContainer = document.getElementById('apiRequestsInfoContainer');
+		apiRequestsInfoContainer.textContent = `Total API Requests: ${totalApiRequests}, Successful API Requests: ${successfulApiRequests}`;
+
+    // Check if both total and successful API requests are non-zero
+		if (totalApiRequests !== 0 && totalApiRequests !== successfulApiRequests) {
+			const notification = document.createElement('p');
+			notification.textContent = 'API requests not completed successfully.';
+			
+			// Create reload icon
+            const reloadIcon = document.createElement('span');
+            reloadIcon.innerHTML = '&#8635;'; // Unicode character for reload symbol
+            reloadIcon.style.cursor = 'pointer';
+            reloadIcon.addEventListener('click', () => {
+                location.reload();
+            });
+            notification.appendChild(reloadIcon);
+
+			apiRequestsInfoContainer.appendChild(notification);
+
+		} else if (totalApiRequests !== 0 && totalApiRequests === successfulApiRequests) {
+			const notification = document.createElement('p');
+			notification.textContent = 'API requests completed successfully.';
+			apiRequestsInfoContainer.appendChild(notification);
+		}
+	}
+
+updateApiRequestsInfo();
+</script>
+</body>
+</html>
