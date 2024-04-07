@@ -115,7 +115,12 @@
         border-radius: 5px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         z-index: 1000;
-    }
+		}
+		
+		#sourceInfo {
+		margin-top: 20px;
+		color: #666;
+		}
     </style>
 </head>
 <body>
@@ -172,6 +177,9 @@
             </tr>
         </thead>
         <tbody id="editCountsBody"></tbody>
+		<div id="sourceInfo">
+        <p>This data is powered by the MediaWiki API and Xtools API.</p>
+		</div>
     </table>
     <p id="noUsernameMessage" style="display: none; color: red;">Username not found</p>
     <div id="noteContainer" style="display: none; color: green;">
