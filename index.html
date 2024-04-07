@@ -14,12 +14,9 @@
             text-align: center;
         }
 
-        header {
-            background-color: #007bff;
-            color: white;
-            padding: 1em;
+        .header {
+            color: 006699;
             text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         main {
@@ -57,7 +54,7 @@
 
         .date-inputs {
             display: inline-block;
-            margin: 10;
+            margin: 2;
         }
 
         button {
@@ -74,18 +71,20 @@
         table {
             border-collapse: collapse;
             width: 100%;
-            margin-top: 20px;
+            margin-top: 16px;
         }
 
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
+            padding: 5px;
+            text-align: center;
+			font-size: 14px;
         }
 
         th {
             background-color: #006699;
             color: white;
+			text-align: center;
         }
 
         th:first-child, td:first-child {
@@ -99,6 +98,11 @@
         tr:nth-child(even) {
             background-color: #f2f2f2;
         }
+		
+		a {
+		font-weight: bold;
+		text-decoration: none;
+		}
 
         #noteContainer {
             margin-top: 10px;
@@ -107,25 +111,17 @@
         }
 		
 		#apiRequestsInfoContainer {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background-color: rgba(255, 255, 255, 0.8);
-        padding: 5px 10px;
-        border-radius: 5px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
+		font-size: 13px;
+        background-color: #f2f2f2;
+        padding: 5px 0px 1px 0px;
+        border-radius: 10px;
 		}
 		
-		#sourceInfo {
-		margin-top: 20px;
-		color: #666;
-		}
     </style>
 </head>
 <body>
 <main>
-<h1>Global Wiki Contributions</h1>
+<h1 class="header">Global Wiki Contributions</h1>
     <form id="editCountsForm">
         <input type="text" id="username" name="username" placeholder="Wiki Username" required>
 		<label for="namespace">Namespace:</label>
@@ -163,7 +159,6 @@
 			<option value="829">Module Talk</option>
 			<option value="1198">Translations</option>
 			<option value="1199">Translations Talk</option>
-			<option value="-2">Media</option>
         </select>
         <div class="date-inputs">
             <label for="startDate">Start Date:</label>
@@ -174,9 +169,11 @@
         <button type="submit">Get Contributions</button>
         <button id="downloadCSVButton" type="button" style="display: none;">Download CSV</button>
     </form>
-    
+    <div id="apiRequestsInfoContainer"></div>
     <table id="editCounts" style="display: none;">
         <thead>
+		<tr id="usernameHeaderRow">
+        </tr>
             <tr>
                 <th>Wiki Project</th>
                 <th>Live Edit Count</th>
@@ -184,15 +181,12 @@
             </tr>
         </thead>
         <tbody id="editCountsBody"></tbody>
-		<div id="sourceInfo">
-        <p>This data is powered by the MediaWiki API and Xtools API.</p>
-		</div>
+		<tr id="footerRow">
     </table>
     <p id="noUsernameMessage" style="display: none; color: red;">Username not found</p>
     <div id="noteContainer" style="display: none; color: green;">
         <p id="projectNote" style="display: none; color: red;"></p>
     </div>
-	<div id="apiRequestsInfoContainer"></div>
 </main>
 
 <script>
@@ -276,6 +270,10 @@
 		const editCountsBody = document.getElementById('editCountsBody');
 		const noteContainer = document.getElementById('noteContainer');
 		const projectNote = document.getElementById('projectNote');
+		const usernameHeaderRow = document.getElementById('usernameHeaderRow');
+		const footerRow = document.getElementById('footerRow');
+		usernameHeaderRow.innerHTML = `<th colspan="3">[[ User:${username} ]]</th>`;
+		footerRow.innerHTML = `<th colspan="3" style="font-size: 12px;">This data is sourced from the MediaWiki and Xtools API.</th>`;
 		editCountsBody.innerHTML = '';
 		noteContainer.innerHTML = '';
 		projectNote.innerHTML = '';
@@ -374,7 +372,7 @@
         csvContent += headers;
 
         rows.forEach((row, index) => {
-            if (index > 0) { // Skip header row
+            if (index > 1) { // Skip row
                 const rowData = [];
                 row.querySelectorAll('td').forEach(cell => {
                     rowData.push(cell.textContent.trim());
@@ -422,8 +420,6 @@
         const apiRequestsInfoContainer = document.getElementById('apiRequestsInfoContainer');
         apiRequestsInfoContainer.textContent = `Total API Requests: ${totalApiRequests}, Successful API Requests: ${successfulApiRequests}`;
     });
-	
-
 
 	// Function to update API requests info
 	function updateApiRequestsInfo() {
