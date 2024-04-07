@@ -24,10 +24,10 @@
 
         main {
             max-width: 600px;
-            margin: 20px auto;
+            margin: 60px auto;
             background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 10px;
+            border-radius: 18px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
@@ -123,6 +123,36 @@
 <h1>Global Wiki Contributions</h1>
     <form id="editCountsForm">
         <input type="text" id="username" name="username" placeholder="Wiki Username" required>
+		<label for="namespace">Namespace:</label>
+        <select id="namespace" name="namespace">
+			<option value="all">All</option>
+            <option value="0">Main</option>
+            <option value="1">Talk</option>
+            <option value="2">User</option>
+            <option value="3">User Talk</option>
+			<option value="4">Project</option>
+			<option value="5">Project Talk</option>
+			<option value="6">File</option>
+			<option value="7">File Talk</option>
+			<option value="8">MediaWiki</option>
+			<option value="9">MediaWiki Talk</option>
+			<option value="10">Template</option>
+			<option value="11">Template Talk</option>
+			<option value="12">Help</option>
+			<option value="13">Help Talk</option>
+			<option value="14">Category</option>
+			<option value="15">Category Talk</option>
+			<option value="100">Portal</option>
+			<option value="101">Portal Talk</option>
+			<option value="118">Draft</option>
+			<option value="119">Draft Talk</option>
+			<option value="120">Property</option>
+			<option value="121">Property Talk</option>
+			<option value="120">Lexeme</option>
+			<option value="121">Lexeme Talk</option>
+			<option value="828">Module</option>
+			<option value="829">Module Talk</option>
+        </select>
         <div class="date-inputs">
             <label for="startDate">Start Date:</label>
             <input type="date" id="startDate" name="startDate" required>
@@ -171,24 +201,24 @@
     }
 
 	// Function to fetch edit counts from XTools API
-    async function fetchEditCounts(wikiUrl, username, startDate, endDate) {
-        const apiUrl = `https://xtools.wmcloud.org/api/user/simple_editcount/${wikiUrl}/${username}/all/${startDate}/${endDate}`;
-        totalApiRequests++;
-        try {
-            const response = await fetch(apiUrl);
-            if (response.ok) {
-                successfulApiRequests++;
-                updateApiRequestsInfo();
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error fetching edit counts:', error);
-            return null;
-        }
-    }
+		async function fetchEditCounts(wikiUrl, username, namespace, startDate, endDate) {
+			const apiUrl = `https://xtools.wmcloud.org/api/user/simple_editcount/${wikiUrl}/${username}/${namespace}/${startDate}/${endDate}`;
+			totalApiRequests++;
+			try {
+				const response = await fetch(apiUrl);
+				if (response.ok) {
+					successfulApiRequests++;
+					updateApiRequestsInfo();
+				}
+			return await response.json();
+		} catch (error) {
+			console.error('Error fetching edit counts:', error);
+			return null;
+		}
+	}
 
 	// Function to get user edit counts
-    async function getUserEditCounts(username, startDate, endDate) {
+    async function getUserEditCounts(username, namespace, startDate, endDate) {
         const globalUserInfo = await fetchUserGlobalInfo(username);
 
         if (!globalUserInfo || (globalUserInfo.query.globaluserinfo && globalUserInfo.query.globaluserinfo.missing)) {
@@ -200,7 +230,7 @@
             .filter(contribution => contribution.editcount > 0)
             .map(async contribution => {
                 const wikiUrl = contribution.url.replace('https://', '').replace(/\/$/, '');
-                const editCounts = await fetchEditCounts(wikiUrl, username, startDate, endDate);
+                const editCounts = await fetchEditCounts(wikiUrl, username, namespace, startDate, endDate);
                 return {
                     wiki: wikiUrl,
                     liveEditCount: editCounts.live_edit_count,
@@ -212,11 +242,20 @@
         const editCounts = await Promise.all(editCountsPromises);
         return editCounts.filter(counts => counts !== null);
     }
+	
+	// Function to get namespace parameter
+		function getNamespaceParam(namespace) {
+		if (namespace === '0') {
+			return '';
+		} else {
+			return `&namespace=${namespace}`;
+		}
+	}
 
 	// Function to display user edit counts
-    async function displayUserEditCounts(username, startDate, endDate) {
-		console.log('Displaying user edit counts for:', username, startDate, endDate);
-		const editCounts = await getUserEditCounts(username, startDate, endDate);
+    async function displayUserEditCounts(username, namespace, startDate, endDate) {
+		console.log('Displaying user edit counts for:', username, namespace, startDate, endDate);
+		const editCounts = await getUserEditCounts(username, namespace, startDate, endDate);
 		console.log('Edit counts:', editCounts);
 
 		const editCountsBody = document.getElementById('editCountsBody');
@@ -245,7 +284,7 @@
 
         if (counts.liveEditCount > 0 || counts.deletedEditCount > 0) {
             const row = document.createElement('tr');
-            const wikiURL = `https://${counts.wiki}/w/index.php?title=Special%3AContributions&target=${username}&namespace=all&tagfilter=&start=${startDate}&end=${endDate}&limit=500`;
+            const wikiURL = `https://${counts.wiki}/w/index.php?title=Special%3AContributions&target=${username}&namespace=${namespace}&tagfilter=&start=${startDate}&end=${endDate}&limit=500`;
 
             const liveLink = document.createElement('a');
             liveLink.setAttribute('href', wikiURL);
@@ -343,17 +382,19 @@
     // Check if the URL contains the username, start date, and end date parameters
     const urlParams = new URLSearchParams(window.location.search);
     const usernameFromURL = urlParams.get('username');
+	const namespaceFromURL = urlParams.get('namespace');
     const startDateFromURL = urlParams.get('startDate');
     const endDateFromURL = urlParams.get('endDate');
 
-    if (usernameFromURL && startDateFromURL && endDateFromURL) {
+    if (usernameFromURL && namespaceFromURL && startDateFromURL && endDateFromURL) {
         // Fill the form fields with values from the URL
         document.getElementById('username').value = usernameFromURL;
+		document.getElementById('namespace').value = namespaceFromURL;
         document.getElementById('startDate').value = startDateFromURL;
         document.getElementById('endDate').value = endDateFromURL;
 
         // Trigger the function to fetch user contributions
-        displayUserEditCounts(usernameFromURL, startDateFromURL, endDateFromURL);
+        displayUserEditCounts(usernameFromURL, namespaceFromURL, startDateFromURL, endDateFromURL);
     }
 
     // Display the count of successful API requests
@@ -362,6 +403,8 @@
         apiRequestsInfoContainer.textContent = `Total API Requests: ${totalApiRequests}, Successful API Requests: ${successfulApiRequests}`;
     });
 	
+
+
 	// Function to update API requests info
 	function updateApiRequestsInfo() {
 		const apiRequestsInfoContainer = document.getElementById('apiRequestsInfoContainer');
