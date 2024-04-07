@@ -210,7 +210,7 @@
 
 	// Function to fetch edit counts from XTools API
 		async function fetchEditCounts(wikiUrl, username, namespace, startDate, endDate) {
-			const apiUrl = `https://xtools.wmcloud.org/api/user/simple_editcount/${wikiUrl}/${username}/${namespace}/${startDate}/${endDate}`;
+			const apiUrl = `https://xtools.wmcloud.org/api/user/simple_editcount/${wikiUrl}/${username}/${getNamespaceParam(namespace)}/${startDate}/${endDate}`;
 			totalApiRequests++;
 			try {
 				const response = await fetch(apiUrl);
@@ -253,10 +253,10 @@
 	
 	// Function to get namespace parameter
 		function getNamespaceParam(namespace) {
-		if (namespace === '0') {
-			return '';
+		if (namespace === 'all' || namespace === null) {
+			return 'all';
 		} else {
-			return `&namespace=${namespace}`;
+			return `${namespace}`;
 		}
 	}
 
@@ -394,12 +394,17 @@
     const startDateFromURL = urlParams.get('startDate');
     const endDateFromURL = urlParams.get('endDate');
 
-    if (usernameFromURL && namespaceFromURL && startDateFromURL && endDateFromURL) {
+    if (usernameFromURL && startDateFromURL && endDateFromURL) {
         // Fill the form fields with values from the URL
         document.getElementById('username').value = usernameFromURL;
-		document.getElementById('namespace').value = namespaceFromURL;
         document.getElementById('startDate').value = startDateFromURL;
         document.getElementById('endDate').value = endDateFromURL;
+		
+		if (namespaceFromURL) {
+			document.getElementById('namespace').value = namespaceFromURL;
+		} else {
+			document.getElementById('namespace').value = 'all'; // Default to All
+		}
 
         // Trigger the function to fetch user contributions
         displayUserEditCounts(usernameFromURL, namespaceFromURL, startDateFromURL, endDateFromURL);
