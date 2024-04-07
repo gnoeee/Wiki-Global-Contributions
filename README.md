@@ -9,6 +9,7 @@ This page provide a convenient way for users to track and analyze global contrib
 ## Features
 
 - Input any Wikimedia username and instantly retrieve global contributions data.
+- [New] Added option to filter by namespace
 - Track based on the start and end date.
 - Download contribution data in CSV format for further analysis.
 - Save or Share the link for easy access.
