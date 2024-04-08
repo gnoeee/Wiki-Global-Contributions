@@ -32,11 +32,11 @@
         input[type="date"],
         label,
         button {
-            padding: 10px;
-            margin: 5px;
+            padding: 8px;
+            margin: 7px;
             border: none;
             border-radius: 5px;
-            font-size: 16px;
+            font-size: 13px;
             display: inline-block;
             vertical-align: middle;
         }
@@ -100,8 +100,9 @@
         }
 		
 		a {
-		font-weight: bold;
 		text-decoration: none;
+		color: 339966;
+		
 		}
 
         #noteContainer {
@@ -218,13 +219,14 @@
 				if (response.ok) {
 					successfulApiRequests++;
 					updateApiRequestsInfo();
+					
 				}
 			return await response.json();
 		} catch (error) {
 			console.error('Error fetching edit counts:', error);
 			return null;
 		}
-	}
+    }
 
 	// Function to get user edit counts
     async function getUserEditCounts(username, namespace, startDate, endDate) {
@@ -273,10 +275,16 @@
 		const usernameHeaderRow = document.getElementById('usernameHeaderRow');
 		const footerRow = document.getElementById('footerRow');
 		usernameHeaderRow.innerHTML = `<th colspan="3">[[ User:${username} ]]</th>`;
-		footerRow.innerHTML = `<th colspan="3" style="font-size: 12px;">This data is sourced from the MediaWiki and Xtools API.</th>`;
-		editCountsBody.innerHTML = '';
-		noteContainer.innerHTML = '';
-		projectNote.innerHTML = '';
+		footerRow.innerHTML = `<th colspan="3" style="font-size: 12px; color: #808080; background-color: #f2f2f2;">The data is sourced from <a href="https://www.mediawiki.org/w/api.php">MediaWiki API</a> and <a href="https://xtools.wmcloud.org/api">Xtools API</th>`;
+		    if (editCountsBody) {
+        editCountsBody.innerHTML = '';
+		}
+			if (noteContainer) {
+        noteContainer.innerHTML = '';
+		}
+			if (projectNote) {
+        projectNote.innerHTML = '';
+		}
 
     if (editCounts.length === 0) {
         // No contributions found
@@ -303,6 +311,7 @@
             liveLink.setAttribute('href', wikiURL);
             liveLink.setAttribute('target', '_blank');
             liveLink.textContent = counts.liveEditCount;
+			liveLink.style.fontWeight = 'bold';
 
             const cellWikiURL = document.createElement('td');
             const cellLiveEditCount = document.createElement('td');
@@ -337,7 +346,6 @@
             editCountsBody.appendChild(totalRow);
     }
 	
-
     // Display the note container if needed
     if (hasHighEditCount || totalLiveEditCount === 0 && totalDeletedEditCount === 0) {
         noteContainer.style.display = 'block';
@@ -391,6 +399,7 @@
     }
 
     document.getElementById('downloadCSVButton').addEventListener('click', downloadCSV);
+	
 
     // Check if the URL contains the username, start date, and end date parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -414,12 +423,6 @@
         // Trigger the function to fetch user contributions
         displayUserEditCounts(usernameFromURL, namespaceFromURL, startDateFromURL, endDateFromURL);
     }
-
-    // Display the count of successful API requests
-    window.addEventListener('load', () => {
-        const apiRequestsInfoContainer = document.getElementById('apiRequestsInfoContainer');
-        apiRequestsInfoContainer.textContent = `Total API Requests: ${totalApiRequests}, Successful API Requests: ${successfulApiRequests}`;
-    });
 
 	// Function to update API requests info
 	function updateApiRequestsInfo() {
