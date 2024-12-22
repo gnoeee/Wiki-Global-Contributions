@@ -22,10 +22,10 @@
 		<label for="namespace">Namespace:</label>
         <select id="namespace" name="namespace">
 			<option value="all">All</option>
-            <option value="0">Main</option>
-            <option value="1">Talk</option>
-            <option value="2">User</option>
-            <option value="3">User Talk</option>
+            		<option value="0">Main</option>
+           		<option value="1">Talk</option>
+            		<option value="2">User</option>
+            		<option value="3">User Talk</option>
 			<option value="4">Project</option>
 			<option value="5">Project Talk</option>
 			<option value="6">File</option>
@@ -73,6 +73,7 @@
                 <th>Wiki Project</th>
                 <th>Live Edit Count</th>
                 <th>Deleted Edit Count</th>
+		<th>User Rights</th>
             </tr>
         </thead>
         <tbody id="editCountsBody"></tbody>
@@ -140,6 +141,7 @@
                     wiki: wikiUrl,
                     liveEditCount: editCounts.live_edit_count,
                     deletedEditCount: editCounts.deleted_edit_count,
+		    userGroups: editCounts.user_groups || [],
                     warning: editCounts.warning
                 };
             });
@@ -168,8 +170,8 @@
 		const projectNote = document.getElementById('projectNote');
 		const usernameHeaderRow = document.getElementById('usernameHeaderRow');
 		const footerRow = document.getElementById('footerRow');
-		usernameHeaderRow.innerHTML = `<th colspan="3">[[ User:${username} ]]</th>`;
-		footerRow.innerHTML = `<th colspan="3" style="font-size: 12px; color: #808080; background-color: #f2f2f2;">The data is sourced from <a href="https://www.mediawiki.org/w/api.php">MediaWiki API</a> and <a href="https://xtools.wmcloud.org/api">Xtools API</th>`;
+		usernameHeaderRow.innerHTML = `<th colspan="4">[[ User:${username} ]]</th>`;
+		footerRow.innerHTML = `<th colspan="4" style="font-size: 12px; color: #808080; background-color: #f2f2f2;">The data is sourced from <a href="https://www.mediawiki.org/w/api.php">MediaWiki API</a> and <a href="https://xtools.wmcloud.org/api">Xtools API</th>`;
 		    if (editCountsBody) {
         editCountsBody.innerHTML = '';
 		}
@@ -207,17 +209,24 @@
             liveLink.textContent = counts.liveEditCount;
 			liveLink.style.fontWeight = 'bold';
 
+	// Create a comma-separated list of user groups
+        const userGroupsText = counts.userGroups.join(', '); 
+
             const cellWikiURL = document.createElement('td');
             const cellLiveEditCount = document.createElement('td');
             const cellDeletedEditCount = document.createElement('td');
+	    const cellUserGroups = document.createElement('td')
 
             cellDeletedEditCount.textContent = counts.deletedEditCount;
             cellWikiURL.textContent = counts.wiki;
             cellLiveEditCount.appendChild(liveLink);
+	    cellUserGroups.textContent = userGroupsText;
 
             row.appendChild(cellWikiURL);
             row.appendChild(cellLiveEditCount);
             row.appendChild(cellDeletedEditCount);
+	    row.appendChild(cellUserGroups);
+
 
             editCountsBody.appendChild(row);
 			document.getElementById('editCounts').style.display = 'table';
